@@ -1,0 +1,45 @@
+[project]
+name = "eigen-framework"
+version = "1.0.0"
+description = "The Physics of Software"
+authors = [
+    {name = "HENG Yang", email = "cosmos@eigen.null"},
+]
+dependencies = [
+    "numpy",
+]
+requires-python = ">=3.14"
+readme = "README.md"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.14",
+    "Operating System :: OS Independent",
+]
+
+[project.urls]
+Homepage = "https://github.com/HengYangDS/eigen-framework"
+Repository = "https://github.com/HengYangDS/eigen-framework"
+
+[project.optional-dependencies]
+# Install only when you need to expose pipelines as HTTP APIs
+http = [
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.30",
+]
+
+# Observability and telemetry (optional)
+otlp = [
+    "opentelemetry-sdk>=1.27",
+    "opentelemetry-exporter-otlp>=1.27",
+]
+
+# CSV sink relies on Python stdlib; this extra reserved for future connectors
+csv = []
+sql = [
+    "pymssql>=2.2",
+]
+
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"

@@ -1,0 +1,42 @@
+# Python ignores
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Distribution / packaging
+build/
+dist/
+.eggs/
+*.egg-info/
+
+# Environments
+.venv/
+venv/
+.env
+
+# IDEs and editors
+.idea/
+.vscode/
+
+# Testing
+.pytest_cache/
+.mypy_cache/
+.coverage
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Docs binaries
+docs/*.pdf
+
+# Local tooling artifacts
+.output.txt
+uv.lock
+
+# Generated outputs
+output.csv
+examples/*.csv
