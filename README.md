@@ -1,4 +1,4 @@
-# Eigen Framework
+# Eidos Framework
 
 The Physics of Software.
 
@@ -17,17 +17,17 @@ See [docs/00_INDEX.md](docs/00_INDEX.md).
 - Top-level imports are provided for the most common types and operators:
 
 ```python
-from eigen import activate, Map, Filter, Batch, Operator, Flow, Tensor, Interference
+from eidos import activate, Map, Filter, Batch, Operator, Flow, Tensor, Interference
 ```
 
 ## Quickstart
 
 ```python
 import asyncio
-from eigen.runtime import activate
-from eigen.techne.sources.file_source import FileSource
-from eigen.techne.operators.standard import Map, Filter
-from eigen.techne.emitters.csv_sink import CSVSink
+from eidos.runtime import activate
+from eidos.techne.sources.file_source import FileSource
+from eidos.techne.operators.standard import Map, Filter
+from eidos.techne.emitters.csv_sink import CSVSink
 
 async def main():
     activate()  # set QuantumField as the active field
@@ -46,15 +46,15 @@ if __name__ == "__main__":
 See `examples/` directory.
 
 - Minimal end-to-end demo:
-  - `python examples/eigen_standard_demo.py`
+  - `python examples/eidos_standard_demo.py`
 
 - Map concurrency demo:
   - `python examples/concurrent_map_demo.py`
 
 - HTTP quickstart server (requires extras):
   - `pip install -e .[http]`
-  - Optionally enable simple request logs: set `EIGEN_HTTP_LOGGING=1`
-  - Optional API key enforcement: set `EIGEN_HTTP_API_KEY=your-secret` (client must send `X-API-Key`)
+  - Optionally enable simple request logs: set `EIDOS_HTTP_LOGGING=1`
+  - Optional API key enforcement: set `EIDOS_HTTP_API_KEY=your-secret` (client must send `X-API-Key`)
   - Trace ID: send `X-Trace-Id` to correlate; server echoes it back as `x-trace-id`. If not provided, server generates one and injects into POST payload `_context.trace_id`.
   - Request size guard: if `HTTPPort(max_body_bytes=...)` is set and `Content-Length` exceeds it, POST /run returns 413 as RFC7807 `application/problem+json`.
   - Invalid JSON: if POST /run body cannot be decoded as JSON, returns 400 as RFC7807 `application/problem+json` with an `x-trace-id` header.
@@ -68,7 +68,7 @@ See `examples/` directory.
 - SQL Server demo (requires extras and a reachable SQL Server):
   - `pip install -e .[sql]`
   - Set environment variables:
-    - `EIGEN_SQL_HOST`, `EIGEN_SQL_USER`, `EIGEN_SQL_PASSWORD`, optional `EIGEN_SQL_DATABASE`
+    - `EIDOS_SQL_HOST`, `EIDOS_SQL_USER`, `EIDOS_SQL_PASSWORD`, optional `EIDOS_SQL_DATABASE`
   - Run: `python examples/sql_server_demo.py`
   - Output CSV: `dz_daily_sample.csv` at repo root
 
@@ -80,16 +80,16 @@ python scripts/run_tests.py
 ```
 
 - You can also run individual demos/tests directly:
-  - `python examples/eigen_standard_demo.py`
+  - `python examples/eidos_standard_demo.py`
   - `python tests/test_http_port.py` (skips automatically if FastAPI/Uvicorn are not installed)
 
 ## Repository
-Remote (GitHub): https://github.com/HengYangDS/eigen-framework
+Remote (GitHub): https://github.com/HengYangDS/eidos-framework
 
 ### Clone locally
 ```
-git clone https://github.com/HengYangDS/eigen-framework.git
-cd eigen-framework
+git clone https://github.com/HengYangDS/eidos-framework.git
+cd eidos-framework
 ```
 
 ### Install

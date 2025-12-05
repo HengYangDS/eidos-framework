@@ -1,9 +1,9 @@
 [project]
-name = "eigen-framework"
+name = "eidos-framework"
 version = "1.0.0"
 description = "The Physics of Software"
 authors = [
-    {name = "HENG Yang", email = "cosmos@eigen.null"},
+    {name = "HENG Yang", email = "cosmos@eidos.null"},
 ]
 dependencies = [
     "numpy",
@@ -18,8 +18,8 @@ classifiers = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/HengYangDS/eigen-framework"
-Repository = "https://github.com/HengYangDS/eigen-framework"
+Homepage = "https://github.com/HengYangDS/eidos-framework"
+Repository = "https://github.com/HengYangDS/eidos-framework"
 
 [project.optional-dependencies]
 # Install only when you need to expose pipelines as HTTP APIs
