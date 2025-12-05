@@ -1,19 +1,46 @@
-import argparse
-import os
 import sys
 import shutil
-from typing import List
+from pathlib import Path
+from typing import Annotated, Optional
+import importlib.util
+import importlib.machinery
 
-def create_project(project_name: str, template: str):
-    print(f"Creating Eidos project '{project_name}' using template '{template}'...")
+import typer
+from rich.console import Console
+from rich.theme import Theme
+
+from eidos.system.logging import configure_logging, get_logger
+
+# Configure Console
+custom_theme = Theme({
+    "info": "dim cyan",
+    "warning": "magenta",
+    "error": "bold red",
+    "success": "green"
+})
+console = Console(theme=custom_theme)
+logger = get_logger("eidos.cli")
+
+app = typer.Typer(help="Eidos: The Neuro-Symbolic Logic Operating System CLI")
+
+@app.command()
+def create(
+    name: Annotated[str, typer.Argument(help="Name of the project to create")],
+    template: Annotated[str, typer.Option(help="Project template to use")] = "standard"
+):
+    """
+    Create a new Eidos project scaffolding.
+    """
+    console.print(f"[info]Creating Eidos project '[bold]{name}[/bold]' using template '[bold]{template}[/bold]'...[/info]")
     
-    if os.path.exists(project_name):
-        print(f"Error: Directory '{project_name}' already exists.")
-        return
+    project_path = Path(name)
+    if project_path.exists():
+        console.print(f"[error]Error: Directory '{name}' already exists.[/error]")
+        raise typer.Exit(code=1)
 
-    os.makedirs(project_name)
-    os.makedirs(os.path.join(project_name, "src"))
-    os.makedirs(os.path.join(project_name, "tests"))
+    project_path.mkdir(parents=True)
+    (project_path / "src").mkdir()
+    (project_path / "tests").mkdir()
     
     # Create main.py
     main_py = """import eidos
@@ -31,99 +58,162 @@ def main():
 if __name__ == "__main__":
     eidos.run(main())
 """
-    with open(os.path.join(project_name, "src", "main.py"), "w") as f:
-        f.write(main_py)
+    (project_path / "src" / "main.py").write_text(main_py)
         
-    print(f"Project '{project_name}' created successfully.")
-    print(f"Run: cd {project_name} && eidos run src/main.py")
+    console.print(f"[success]Project '{name}' created successfully.[/success]")
+    console.print(f"[info]Run: cd {name} && eidos run src/main.py[/info]")
 
-def run_pipeline(script_path: str, cluster: str = None):
-    print(f"Running Eidos pipeline from '{script_path}'...")
+@app.command()
+def run(
+    script: Annotated[str, typer.Argument(help="Path to the pipeline script")],
+    cluster: Annotated[Optional[str], typer.Option(help="Ray cluster address (e.g. ray://localhost:6379)")] = None,
+    verbose: Annotated[bool, typer.Option(help="Enable verbose logging")] = False
+):
+    """
+    Run an Eidos pipeline locally or on a cluster.
+    """
+    if verbose:
+        configure_logging("DEBUG")
+    else:
+        configure_logging("INFO")
+
+    console.print(f"[info]Running Eidos pipeline from '[bold]{script}[/bold]'...[/info]")
     if cluster:
-        print(f"Connecting to cluster: {cluster}")
+        console.print(f"[info]Connecting to cluster: [bold]{cluster}[/bold][/info]")
         
-    # We need to load the script and find the flow
-    import importlib.util
-    import importlib.machinery
-    
-    if not os.path.exists(script_path):
-        print(f"Error: File '{script_path}' not found.")
-        return
+    script_path = Path(script)
+    if not script_path.exists():
+        console.print(f"[error]Error: File '{script}' not found.[/error]")
+        raise typer.Exit(code=1)
 
     # Add script dir to path so it can import sibling modules
-    sys.path.append(os.path.dirname(os.path.abspath(script_path)))
+    sys.path.append(str(script_path.parent.resolve()))
     
-    loader = importlib.machinery.SourceFileLoader("eidos_user_script", script_path)
-    spec = importlib.util.spec_from_loader(loader.name, loader)
-    mod = importlib.util.module_from_spec(spec)
-    loader.exec_module(mod)
-    
-    # Look for a flow object or a main function that returns a flow
-    if hasattr(mod, "main"):
-        res = mod.main()
-        if hasattr(res, "compile"): # It's a SymbolicStream or similar
-            print("Compiling and executing flow...")
-            from eidos.zero.compiler import Compiler
-            # For now default to local execution (Polars/String)
-            # In a real scenario, we'd use the 'cluster' arg to pick backend
-            target = "ray" if cluster else "polars"
-            
-            # Check if backend is installed, else fallback
-            if target == "ray":
-                try:
-                    import ray
-                except ImportError:
-                    print("Ray not installed, falling back to local.")
-                    target = "polars"
-            
-            if target == "polars":
-                try:
-                    import polars
-                except ImportError:
-                    print("Polars not installed, falling back to string execution plan.")
-                    target = "string"
-            
-            graph = res.compile()
-            result = Compiler.compile(graph, target=target)
-            
-            if callable(result):
-                result()
-            elif hasattr(result, "collect"): # Polars
-                print(result.collect())
-            else:
-                print(f"Execution Plan: {result}")
+    try:
+        loader = importlib.machinery.SourceFileLoader("eidos_user_script", str(script_path))
+        spec = importlib.util.spec_from_loader(loader.name, loader)
+        mod = importlib.util.module_from_spec(spec)
+        loader.exec_module(mod)
+        
+        # Look for a flow object or a main function that returns a flow
+        if hasattr(mod, "main"):
+            res = mod.main()
+            if hasattr(res, "compile"): # It's a SymbolicStream or similar
+                console.print("[info]Compiling and executing flow...[/info]")
+                from eidos.zero.compiler import Compiler
                 
-    else:
-        print("Error: No 'main()' function found in script.")
+                target = "ray" if cluster else "polars"
+                
+                # Check if backend is installed, else fallback
+                if target == "ray":
+                    try:
+                        import ray
+                    except ImportError:
+                        console.print("[warning]Ray not installed, falling back to local.[/warning]")
+                        target = "polars"
+                
+                if target == "polars":
+                    try:
+                        import polars
+                    except ImportError:
+                        console.print("[warning]Polars not installed, falling back to Python Native Execution (Free Lane).[/warning]")
+                        target = "python"
+                
+                graph = res.compile()
+                result = Compiler.compile(graph, target=target)
+                
+                if callable(result):
+                    result()
+                elif hasattr(result, "collect"): # Polars
+                    print(result.collect())
+                else:
+                    console.print(f"[success]Execution Plan generated: {result}[/success]")
+                    
+        else:
+            console.print("[error]Error: No 'main()' function found in script.[/error]")
+            raise typer.Exit(code=1)
+            
+    except Exception as e:
+        logger.exception("Pipeline execution failed")
+        console.print(f"[error]Execution failed: {e}[/error]")
+        raise typer.Exit(code=1)
+
+@app.command()
+def serve(
+    script: Annotated[str, typer.Argument(help="Path to the pipeline script containing @expose functions")],
+    port: Annotated[int, typer.Option(help="Port to bind")] = 8000,
+    host: Annotated[str, typer.Option(help="Host to bind")] = "0.0.0.0"
+):
+    """
+    Serve exposed pipelines as a REST API.
+    """
+    try:
+        from eidos.interfaces.rest import RestPort
+    except ImportError as e:
+        console.print(f"[error]Error importing REST Port: {e}[/error]")
+        console.print("[info]Hint: Install with 'pip install eidos-framework[http]'[/info]")
+        raise typer.Exit(code=1)
+    
+    console.print(f"[info]Loading pipelines from '[bold]{script}[/bold]'...[/info]")
+    
+    try:
+        server = RestPort(host=host, port=port)
+        server.load_module(script)
+        server.run()
+    except Exception as e:
+        console.print(f"[error]Failed to start server: {e}[/error]")
+        raise typer.Exit(code=1)
+
+@app.command()
+def studio(
+    script: Annotated[Optional[str], typer.Argument(help="Path to the pipeline script to visualize")] = None,
+    port: Annotated[int, typer.Option(help="Port to bind")] = 8888,
+    host: Annotated[str, typer.Option(help="Host to bind")] = "127.0.0.1"
+):
+    """
+    Launch the Eidos Web Studio.
+    """
+    try:
+        from eidos.interfaces.studio import start_studio
+    except ImportError:
+        console.print("[error]Error importing Studio. Install with 'pip install eidos-framework[http]'[/error]")
+        raise typer.Exit(code=1)
+
+    start_studio(host=host, port=port, script=script)
+
+@app.command()
+def deploy(
+    script: Annotated[str, typer.Argument(help="Path to the pipeline script")],
+    port: Annotated[int, typer.Option(help="Exposed port")] = 8000
+):
+    """
+    Generates deployment artifacts (Dockerfile, docker-compose.yml).
+    """
+    from eidos.system.deployment import generate_dockerfile, generate_compose
+    
+    script_path = Path(script)
+    if not script_path.exists():
+        console.print(f"[error]Error: Script '{script}' not found.[/error]")
+        raise typer.Exit(code=1)
+        
+    console.print(f"[info]Generating deployment artifacts for [bold]{script}[/bold]...[/info]")
+    
+    # Generate Dockerfile
+    dockerfile = generate_dockerfile(script, port)
+    Path("Dockerfile").write_text(dockerfile)
+    console.print("[success]Created Dockerfile[/success]")
+    
+    # Generate Compose
+    project_name = script_path.parent.parent.name if script_path.parent.name == "src" else "eidos-app"
+    compose = generate_compose(project_name, script, port)
+    Path("docker-compose.yml").write_text(compose)
+    console.print("[success]Created docker-compose.yml[/success]")
+    
+    console.print("\n[info]To deploy, run:[/info]")
+    console.print("  [bold]docker compose up --build[/bold]")
 
 def main():
-    parser = argparse.ArgumentParser(description="Eidos CLI")
-    subparsers = parser.add_subparsers(dest="command", help="Command to execute")
-    
-    # create
-    create_parser = subparsers.add_parser("create", help="Create a new Eidos project")
-    create_parser.add_argument("name", help="Project name")
-    create_parser.add_argument("--template", default="standard", help="Project template")
-    
-    # run
-    run_parser = subparsers.add_parser("run", help="Run an Eidos pipeline")
-    run_parser.add_argument("script", help="Path to the pipeline script")
-    run_parser.add_argument("--cluster", help="Ray cluster address")
-    
-    # deploy
-    deploy_parser = subparsers.add_parser("deploy", help="Deploy a pipeline")
-    deploy_parser.add_argument("script", help="Path to the pipeline script")
-    
-    args = parser.parse_args()
-    
-    if args.command == "create":
-        create_project(args.name, args.template)
-    elif args.command == "run":
-        run_pipeline(args.script, args.cluster)
-    elif args.command == "deploy":
-        print("Deploy functionality coming soon.")
-    else:
-        parser.print_help()
+    app()
 
 if __name__ == "__main__":
     main()

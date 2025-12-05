@@ -1,51 +1,64 @@
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional, Tuple
+import numpy as np
+from ..intelligence.driver import CognitiveDriver, OpenAIDriver
+from ..zero.symbolism.dsl import SymbolicStream
+from ..system.logging import get_logger
+
+logger = get_logger(__name__)
 
 # Mocking mcp type for static check
 FastMCP = Any
 
-from ..zero.symbolism.dsl import SymbolicStream
-
 class SemanticRouter:
     """
-    Routes natural language queries to specific tools.
+    Routes natural language queries to specific tools using Vector Search.
     """
-    def __init__(self):
-        self.routes: Dict[str, str] = {}
+    def __init__(self, driver: CognitiveDriver):
+        self.driver = driver
+        self.routes: List[Dict[str, Any]] = [] # List of {intent, embedding, tool_name}
 
-    def register(self, intent: str, tool_name: str):
-        self.routes[intent] = tool_name
+    async def register(self, intent: str, tool_name: str):
+        embedding = await self.driver.compute_embedding([intent])
+        self.routes.append({
+            "intent": intent,
+            "embedding": np.array(embedding[0]),
+            "tool_name": tool_name
+        })
 
-    def route(self, query: str) -> Optional[str]:
-        # Simple keyword match for PoC (Simulating Vector Search)
-        import re
-        def tokenize(text):
-            return set(re.findall(r'\w+', text.lower()))
-
+    async def route(self, query: str, threshold: float = 0.7) -> Optional[str]:
+        if not self.routes:
+            return None
+            
+        query_embedding = (await self.driver.compute_embedding([query]))[0]
+        q_vec = np.array(query_embedding)
+        
         best_match = None
-        max_score = 0
-        query_tokens = tokenize(query)
+        max_score = -1.0
         
-        for intent, tool in self.routes.items():
-            intent_tokens = tokenize(intent)
-            score = len(query_tokens.intersection(intent_tokens))
-            if score > max_score and score > 0:
+        for route in self.routes:
+            t_vec = route["embedding"]
+            # Cosine Similarity
+            score = np.dot(q_vec, t_vec) / (np.linalg.norm(q_vec) * np.linalg.norm(t_vec))
+            
+            if score > max_score:
                 max_score = score
-                best_match = tool
+                best_match = route["tool_name"]
         
-        return best_match
+        if max_score >= threshold:
+            return best_match
+        return None
 
 class MCPPort:
-    def __init__(self, name: str):
+    def __init__(self, name: str, driver: CognitiveDriver = None):
         self.name = name
+        self.driver = driver or OpenAIDriver()
         self.tools: List[Dict[str, Any]] = []
-        self.router = SemanticRouter()
+        self.router = SemanticRouter(self.driver)
 
-    def register_pipeline(self, name: str, pipeline_fn: Callable[..., SymbolicStream], description: str = ""):
+    async def register_pipeline(self, name: str, pipeline_fn: Callable[..., SymbolicStream], description: str = ""):
         """
         Registers a pipeline function as an MCP tool.
         """
-        # In a real implementation, this would inspect the pipeline_fn signature
-        # and register it with FastMCP.
         self.tools.append({
             "name": name,
             "fn": pipeline_fn,
@@ -53,23 +66,21 @@ class MCPPort:
         })
         
         # Auto-register for routing based on description or name
-        self.router.register(description or name, name)
-        print(f"[MCP] Registered tool: {name}")
+        await self.router.register(description or name, name)
+        logger.info("Registered tool", name=name)
 
-    def handle_query(self, query: str) -> Any:
+    async def handle_query(self, query: str) -> Any:
         """
         Handles a natural language query.
         """
-        tool_name = self.router.route(query)
+        tool_name = await self.router.route(query)
         if tool_name:
-            print(f"[MCP] Routing query '{query}' to tool '{tool_name}'")
-            # In real world, we would extract args from query using LLM
-            # Here we just return the tool function for demo
+            logger.info("Routing query to tool", query=query, tool=tool_name)
             tool = next((t for t in self.tools if t["name"] == tool_name), None)
             return tool
         else:
-            print(f"[MCP] No matching tool found for query '{query}'")
+            logger.info("No matching tool found for query", query=query)
             return None
 
     def run(self):
-        print(f"[MCP] Serving {len(self.tools)} tools on {self.name}...")
+        logger.info("Serving MCP tools", count=len(self.tools), name=self.name)

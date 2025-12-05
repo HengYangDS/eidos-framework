@@ -1,0 +1,7 @@
+# serializer version: 1
+# name: test_complex_topology_snapshot
+  'Sink(Choice(Scan(A), Scan(B)), target=out)'
+# ---
+# name: test_pipeline_snapshot
+  'Sink(Map(Filter(Scan(csv://data.csv), pred=<lambda>), fn=<lambda>), target=s3://output)'
+# ---

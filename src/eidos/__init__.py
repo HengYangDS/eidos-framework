@@ -9,21 +9,32 @@ from .zero.symbolism import (
 )
 from .quant import indicators as quant
 from .zero.compiler import Compiler
+from .system.logging import configure_logging, get_logger
+from .system.config import settings
 
-def run(flow, engine="polars"):
+# Initialize default logging (can be re-configured by CLI)
+configure_logging(level=settings.log_level, json_format=settings.json_logs)
+logger = get_logger("eidos")
+
+def run(flow, engine=None):
     """
     Compiles and runs the given flow.
     """
+    engine = engine or settings.default_backend
+    logger.debug("Running flow", engine=engine)
     if hasattr(flow, "compile"):
         graph = flow.compile()
-        # In a real scenario, detect available backends
-        try:
-            import polars
-        except ImportError:
-            if engine == "polars":
-                engine = "string"
+        # Detect available backends
+        target = engine
+        if target == "polars":
+            try:
+                import polars
+            except ImportError:
+                # Fallback to Python Native Backend (Free Lane)
+                logger.warning("Polars not found, falling back to Python backend")
+                target = "python"
         
-        return Compiler.compile(graph, target=engine)
+        return Compiler.compile(graph, target=target)
     return None
 
 def mcp_tool(name=None, description=None):
@@ -49,4 +60,4 @@ __all__ = [
     "quant", "run", "mcp_tool", "expose"
 ]
 
-__version__ = "1.0.0-alpha"
+__version__ = "1.0.0"

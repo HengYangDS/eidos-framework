@@ -11,7 +11,7 @@ Instead of using a "Chat with Data" wrapper, Eidos exposes itself as a set of **
 Any Eidos pipeline can be exposed as an MCP tool with a single decorator.
 
 ```python
-@eos.mcp_tool(
+@eidos.mcp_tool(
     name="analyze_stock",
     description="Calculates RSI and MACD for a given ticker symbol."
 )

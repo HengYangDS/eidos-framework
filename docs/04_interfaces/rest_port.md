@@ -5,7 +5,7 @@
 In Eidos, you don't write Flask/FastAPI code. You simply expose a pipeline.
 
 ```python
-@eos.expose(route="/api/v1/predict", method="POST")
+@eidos.expose(route="/api/v1/predict", method="POST")
 def prediction_pipeline(payload: dict):
     return (
         Source.from_payload(payload)

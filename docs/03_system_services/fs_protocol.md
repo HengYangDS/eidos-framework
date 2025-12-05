@@ -49,8 +49,8 @@ Eidos FS treats all data as **Streams**.
 The API is unified:
 ```python
 # Reads file (Finite)
-eos.read("s3://data.parquet")
+eidos.read("s3://data.parquet")
 
 # Reads topic (Infinite)
-eos.read("kafka://broker/topic")
+eidos.read("kafka://broker/topic")
 ```

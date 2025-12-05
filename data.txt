@@ -1,4 +1,0 @@
-apple,1.2
-banana,0.8
-pear,2.5
-avocado,3.3

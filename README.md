@@ -1,98 +1,110 @@
-# Eidos Framework
+# Eidos: The Neuro-Symbolic Logic Operating System
 
-The Physics of Software.
+> **"Code is Topology. Execution is Physis. Intelligence is Control."**
 
-## Requirements
-- Python >= 3.14
-- OS: Linux/macOS/Windows
+Eidos (formerly Eigen Framework, see [Evolution](docs/01_principia/evolution_from_eigen.md)) is a next-generation logic operating system designed to decouple business logic from physical execution. It enables **"Write Once, Run Optimally"** across local vectors, distributed clusters, and databases.
 
-Optional integrations (install when needed):
-- HTTP Port: `pip install -e .[http]`
-- SQL Server Source: `pip install -e .[sql]`
+## 🌟 Key Features
 
-## Documentation
-See [docs/00_INDEX.md](docs/00_INDEX.md).
+*   **Logic Compiler (Eidos Zero)**: Define pipelines as immutable Abstract Syntax Trees (AST) using a lazy Python DSL (`>>`).
+*   **Hybrid Runtime**:
+    *   **Vector Lane**: High-performance local processing via **Polars** (Rust).
+    *   **Cluster Lane**: Distributed execution via **Ray**.
+    *   **Pushdown Lane**: SQL generation for **DolphinDB** / **ClickHouse**.
+    *   **Free Lane**: True parallelism for Python UDFs using **Python 3.14 (No-GIL)**.
+*   **Enterprise Grade**:
+    *   **Observability**: Built-in **OpenTelemetry** tracing (`@trace_span`).
+    *   **Type Safety**: Runtime verification via **Beartype**.
+    *   **Configuration**: 12-Factor App compliant via **Pydantic Settings**.
+*   **Neuro-Symbolic Interface**:
+    *   **MCP Port**: Automatically exposes pipelines as tools to LLMs (Claude/GPT).
+    *   **Sidecar**: AI-driven self-healing daemon that diagnoses and patches runtime errors.
+*   **System Services**:
+    *   **Governance**: Compile-time lineage extraction.
+    *   **Quant Library**: High-performance financial indicators (`RSI`, `MACD`, `Backtest`).
 
-## Public API
-- Top-level imports are provided for the most common types and operators:
+## 📚 Documentation (The Eidos Canon)
 
-```python
-from eidos import activate, Map, Filter, Batch, Operator, Flow, Tensor, Interference
+See [docs/00_INDEX.md](docs/00_INDEX.md) for the complete specification.
+
+*   **Book I**: Principia (Architecture, Manifesto)
+*   **Book II**: Eidos Zero (Kernel Specs)
+*   **Book III**: System Services (StdLib, Governance)
+*   **Book IV**: Interfaces (MCP, FlightSQL)
+*   **Book V**: Developer Experience (CLI, IDE)
+*   **Book VI**: Extensions (Quant, Ecosystem)
+
+## 🚀 Quick Start
+
+### Installation
+
+```bash
+# Install the OS (includes Polars & Arrow)
+pip install eidos-framework
+
+# For distributed computing (optional)
+pip install eidos-framework[ray]
 ```
 
-## Quickstart
+### Creating a Project
+
+```bash
+# Scaffold a new project
+eidos create my-strategy --template quant
+cd my-strategy
+```
+
+### Defining Logic (src/main.py)
 
 ```python
-import asyncio
-from eidos.runtime import activate
-from eidos.techne.sources.file_source import FileSource
-from eidos.techne.operators.standard import Map, Filter
-from eidos.techne.emitters.csv_sink import CSVSink
+from eidos import Source, Sink
+from eidos.quant import RSI, MACD
 
-async def main():
-    activate()  # set QuantumField as the active field
-    src = FileSource("./data.txt")
-    fil = Filter(lambda line: "a" in line)
-    mapper = Map(lambda line: {"value": line})
-    sink = CSVSink("./out.csv")
-    H = src >> fil >> mapper >> sink
-    await H(None)
+def main():
+    # Define topology (Lazy Evaluation)
+    flow = (
+        Source("s3://market-data/aapl.parquet")
+        >> RSI(window=14)
+        >> MACD(fast=12, slow=26)
+        >> Sink("db://signals")
+    )
+    return flow
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    import eidos
+    # Compiles to Polars/Ray and executes
+    eidos.run(main())
 ```
 
-## Examples
-See `examples/` directory.
+### Running
 
-- Minimal end-to-end demo:
-  - `python examples/eidos_standard_demo.py`
+```bash
+# Local Execution (Vector Lane)
+eidos run src/main.py
 
-- Map concurrency demo:
-  - `python examples/concurrent_map_demo.py`
-
-- HTTP quickstart server (requires extras):
-  - `pip install -e .[http]`
-  - Optionally enable simple request logs: set `EIDOS_HTTP_LOGGING=1`
-  - Optional API key enforcement: set `EIDOS_HTTP_API_KEY=your-secret` (client must send `X-API-Key`)
-  - Trace ID: send `X-Trace-Id` to correlate; server echoes it back as `x-trace-id`. If not provided, server generates one and injects into POST payload `_context.trace_id`.
-  - Request size guard: if `HTTPPort(max_body_bytes=...)` is set and `Content-Length` exceeds it, POST /run returns 413 as RFC7807 `application/problem+json`.
-  - Invalid JSON: if POST /run body cannot be decoded as JSON, returns 400 as RFC7807 `application/problem+json` with an `x-trace-id` header.
-  - Start: `python examples/http_quickstart.py`
-  - Test JSON:
-    - `curl -X POST http://127.0.0.1:8000/run -H "content-type: application/json" -d '{"text":"hello"}'`
-  - Stream SSE:
-    - `curl http://127.0.0.1:8000/stream`
-  - When API key is enabled, add header: `-H "X-API-Key: your-secret"`
-
-- SQL Server demo (requires extras and a reachable SQL Server):
-  - `pip install -e .[sql]`
-  - Set environment variables:
-    - `EIDOS_SQL_HOST`, `EIDOS_SQL_USER`, `EIDOS_SQL_PASSWORD`, optional `EIDOS_SQL_DATABASE`
-  - Run: `python examples/sql_server_demo.py`
-  - Output CSV: `dz_daily_sample.csv` at repo root
-
-## Testing
-- Preferred: use the local runner to avoid site-packages collisions and ensure `src/` is on the path.
-
-```
-python scripts/run_tests.py
+# Distributed Execution (Cluster Lane)
+eidos run src/main.py --cluster ray://localhost:6379
 ```
 
-- You can also run individual demos/tests directly:
-  - `python examples/eidos_standard_demo.py`
-  - `python tests/test_http_port.py` (skips automatically if FastAPI/Uvicorn are not installed)
+## 🧠 AI Integration
 
-## Repository
-Remote (GitHub): https://github.com/HengYangDS/eidos-framework
+Start the MCP Server to expose your pipelines to Claude Desktop or other MCP Clients:
 
-### Clone locally
-```
-git clone https://github.com/HengYangDS/eidos-framework.git
-cd eidos-framework
+```python
+from eidos.interfaces.mcp import MCPPort
+from my_strategy import main
+
+port = MCPPort("MyQuantServer")
+port.register_pipeline("run_strategy", main, "Executes the alpha strategy")
+port.run()
 ```
 
-### Install
-```
-pip install -e .
-```
+## 🛠️ Status
+
+*   **Kernel**: v1.0-Alpha (Stable DSL & Transpiler)
+*   **Backends**: Polars (Ready), DolphinDB (Ready), Ray (Beta)
+*   **Intelligence**: MCP Port (Ready), Sidecar (Beta)
+
+## License
+
+MIT

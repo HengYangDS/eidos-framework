@@ -72,3 +72,8 @@ def test_branching_logic():
     assert len(graph.edges) == 2 # Source->Map, Source->Filter
     
     assert path_a.graph is path_b.graph
+
+if __name__ == "__main__":
+    test_pipeline_construction()
+    test_branching_logic()
+    print("--- DSL Logic Tests Passed ---")

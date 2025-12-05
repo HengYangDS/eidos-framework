@@ -56,5 +56,5 @@ The Catalog is the "File Explorer" of Eidos. It unifies:
 
 ```python
 # Accessing the catalog
-table = eos.catalog.load("warehouse.public.trades")
+table = eidos.catalog.load("warehouse.public.trades")
 ```

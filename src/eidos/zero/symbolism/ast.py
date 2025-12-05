@@ -1,7 +1,12 @@
 from dataclasses import dataclass, field
-from typing import List, Dict, Any, Optional, Union
 from enum import Enum
 import uuid
+from typing import Any
+
+# PEP 695 Type Aliases (Python 3.12+)
+type NodeID = str
+type GraphID = str
+type Edge = tuple[NodeID, NodeID]
 
 class OpType(Enum):
     SOURCE = "Source"
@@ -23,14 +28,14 @@ class Node:
     A node in the logical computation graph (AST).
     Immutable and serializable.
     """
-    id: str
+    id: NodeID
     op_type: OpType
-    config: Dict[str, Any] = field(default_factory=dict)
-    parents: List[str] = field(default_factory=list)
+    config: dict[str, Any] = field(default_factory=dict)
+    parents: list[NodeID] = field(default_factory=list)
     
     # Metadata for the compiler
-    schema_in: Optional[Any] = None
-    schema_out: Optional[Any] = None
+    schema_in: Any | None = None
+    schema_out: Any | None = None
     
     @property
     def short_id(self) -> str:
@@ -42,9 +47,9 @@ class Graph:
     The Logical Plan (DAG).
     Contains all nodes and their relationships.
     """
-    id: str = field(default_factory=lambda: str(uuid.uuid4()))
-    nodes: Dict[str, Node] = field(default_factory=dict)
-    edges: List[tuple[str, str]] = field(default_factory=list)
+    id: GraphID = field(default_factory=lambda: str(uuid.uuid4()))
+    nodes: dict[NodeID, Node] = field(default_factory=dict)
+    edges: list[Edge] = field(default_factory=list)
     
     def add_node(self, node: Node):
         if node.id in self.nodes:
@@ -54,14 +59,14 @@ class Graph:
             self.edges.append((p, node.id))
             
     @property
-    def sources(self) -> List[Node]:
+    def sources(self) -> list[Node]:
         return [n for n in self.nodes.values() if not n.parents]
         
     @property
-    def sinks(self) -> List[Node]:
+    def sinks(self) -> list[Node]:
         return [n for n in self.nodes.values() if n.op_type == OpType.SINK]
         
-    def to_json(self) -> Dict[str, Any]:
+    def to_json(self) -> dict[str, Any]:
         """Serialize graph for visualization or transport."""
         return {
             "id": self.id,

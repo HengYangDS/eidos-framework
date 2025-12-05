@@ -1,13 +1,16 @@
-from typing import Any, Callable, List, Optional, Union
+from collections.abc import Callable
+from typing import Self, Any
 import uuid
+from beartype import beartype
 from .ast import Node, Graph, OpType
 
+@beartype
 class SymbolicStream:
     """
     Represents a stream of data in the logical graph.
     It holds the reference to the current tip of the graph (node).
     """
-    def __init__(self, node: Node, graph: Optional[Graph] = None):
+    def __init__(self, node: Node, graph: Graph | None = None):
         self.node = node
         self.graph = graph if graph is not None else Graph()
         self.graph.add_node(node)
@@ -80,18 +83,19 @@ class SymbolicStream:
         )
         return SymbolicStream(ensemble_node, self.graph)
 
-    def compile(self):
+    def compile(self) -> Graph:
         """
         Syntactic sugar to get the graph.
         In a real scenario, this would call the Compiler.
         """
         return self.graph
 
+@beartype
 class Operator:
     """
     Base class for all logical operators.
     """
-    def __init__(self, config: Optional[dict] = None):
+    def __init__(self, config: dict | None = None):
         self.config = config or {}
 
     @property
@@ -161,18 +165,38 @@ class EnsembleOperator(Operator):
 
 # --- Standard Operators ---
 
-def Source(uri: str) -> SymbolicStream:
+class Source:
     """
-    Functional entry point that starts a flow.
+    Entry point for data sources.
+    Now a class to support static factory methods.
     """
-    node = Node(
-        id=uuid.uuid4().hex,
-        op_type=OpType.SOURCE,
-        config={"uri": uri},
-        parents=[]
-    )
-    return SymbolicStream(node)
+    def __new__(cls, uri: str) -> SymbolicStream:
+        """
+        Default constructor: Source("uri")
+        """
+        node = Node(
+            id=uuid.uuid4().hex,
+            op_type=OpType.SOURCE,
+            config={"uri": uri},
+            parents=[]
+        )
+        return SymbolicStream(node)
+    
+    @staticmethod
+    def from_payload(payload: Any) -> SymbolicStream:
+        """
+        Creates a source from a direct payload (dict/list).
+        Used by REST Port.
+        """
+        node = Node(
+            id=uuid.uuid4().hex,
+            op_type=OpType.SOURCE,
+            config={"uri": "payload://", "payload": payload},
+            parents=[]
+        )
+        return SymbolicStream(node)
 
+@beartype
 class Map(Operator):
     def __init__(self, fn: Callable):
         super().__init__(config={"fn": fn, "fn_name": getattr(fn, "__name__", str(fn))})
@@ -181,6 +205,7 @@ class Map(Operator):
     def op_type(self) -> OpType:
         return OpType.MAP
 
+@beartype
 class Filter(Operator):
     def __init__(self, predicate: Callable):
         super().__init__(config={"predicate": predicate, "fn_name": getattr(predicate, "__name__", str(predicate))})
@@ -189,6 +214,7 @@ class Filter(Operator):
     def op_type(self) -> OpType:
         return OpType.FILTER
 
+@beartype
 class Sink(Operator):
     def __init__(self, uri: str):
         super().__init__(config={"uri": uri})
@@ -196,3 +222,10 @@ class Sink(Operator):
     @property
     def op_type(self) -> OpType:
         return OpType.SINK
+
+    @classmethod
+    def to_response(cls) -> "Sink":
+        """
+        Returns a Sink that outputs to the HTTP response.
+        """
+        return cls(uri="http://response")

@@ -4,32 +4,37 @@
 
 It is designed to bridge the gap between **Python Research** (backtesting) and **C++ Production** (execution).
 
-## 1. Core Indicators (TA-Lib Compatible)
+## 1. Core Indicators (Native Implementation)
 
 All indicators are backend-agnostic. They compile to:
-*   **Polars**: `df.select(pl.col("x").ta.rsi())` (using `polars-ta` extension) or native rolling expressions.
-*   **DolphinDB**: `rsi(x, 14)` (using native functions).
-*   **Ray**: Parallelized rolling window operations.
+*   **Polars**: Native Rust-backed vectorized expressions (Zero-Copy).
+*   **DolphinDB**: Transpiled to `.dos` scripts using built-in functions (`mavg`, `rsi`, `cci`).
+*   **Python**: Pure Python generators (No-GIL) for debugging and simple backtesting.
 
 ### Momentum
 *   `RSI(window=14)`: Relative Strength Index.
 *   `MACD(fast=12, slow=26, signal=9)`: Moving Average Convergence Divergence.
-*   `Stoch(window=14, smooth=3)`: Stochastic Oscillator.
+*   `Stoch(window=14, smooth=3)`: Stochastic Oscillator (%K, %D).
 *   `CCI(window=14)`: Commodity Channel Index.
 
 ### Trend
 *   `SMA(window)`: Simple Moving Average.
 *   `EMA(window)`: Exponential Moving Average.
 *   `WMA(window)`: Weighted Moving Average.
-*   `ADX(window=14)`: Average Directional Index.
+*   `ADX(window=14)`: Average Directional Index (Wilder's Smoothing).
 
 ### Volatility
 *   `BollingerBands(window=20, std=2)`: Upper, Middle, Lower bands.
-*   `ATR(window=14)`: Average True Range.
+*   `ATR(window=14)`: Average True Range (Wilder's Smoothing).
 
 ### Volume
 *   `OBV()`: On-Balance Volume.
 *   `VWAP()`: Volume Weighted Average Price.
+
+### Type Safety & Validation (New in v1.0)
+All indicators are strongly typed and validated at runtime using **Pydantic**.
+*   **Validation**: `RSI(window=-1)` raises a `ValidationError` immediately during definition, preventing invalid topologies.
+*   **Schema**: Each operator exposes its configuration schema (e.g., `RSIConfig`), enabling auto-generated UI forms in the future Web Studio.
 
 ## 2. Time Series Primitives
 

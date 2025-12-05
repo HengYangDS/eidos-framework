@@ -11,6 +11,7 @@ Eidos is a logic operating system that decouples business logic from physical ex
 The foundational axioms and architectural vision.
 *   [Manifesto](01_principia/manifesto.md) - "Physics is the only reality."
 *   [Architecture](01_principia/architecture.md) - The Microkernel & 4-Layer Stack.
+*   [Evolution](01_principia/evolution_from_eigen.md) - From Eigen to Eidos.
 *   [Concepts & Terminology](01_principia/concepts.md) - The vocabulary of Eidos (AST, Monad, Kernel).
 
 ### [Book II: Eidos Zero (The Kernel)](02_kernel_zero/symbolism.md)

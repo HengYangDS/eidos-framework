@@ -37,6 +37,14 @@ The Hardware Abstraction Layer (HAL) is responsible for physically executing the
     *   Only retrieves the final result (e.g., a single number or a small summary table).
     *   **Zero Data Movement**: Petabytes of data are processed where they live.
 
+### 1.5 The Triton Lane (GPU)
+*   **Engine**: `eidos.backends.triton`.
+*   **Use Case**: High-performance numerical computing, custom kernels.
+*   **Mechanism**:
+    *   Transpiles `Map` operations into **OpenAI Triton** kernels.
+    *   JIT compiles kernels to PTX/CUDA.
+    *   Executes on NVIDIA GPUs.
+
 ## 2. Backend Selection Strategy
 
 How does Eidos choose the lane? It uses a cost-based heuristic:
@@ -44,7 +52,8 @@ How does Eidos choose the lane? It uses a cost-based heuristic:
 1.  **Explicit Override**: `flow.run(engine="ray")` (Highest priority).
 2.  **Data Locality**: If `Source` is a Database, prefer **Pushdown Lane**.
 3.  **Data Volume**: If estimated size > RAM, prefer **Cluster Lane**.
-4.  **Logic Type**:
+4.  **Hardware**: If GPU is available and logic is numeric, prefer **Triton Lane**.
+5.  **Logic Type**:
     *   If logic is standard relational algebra -> **Vector Lane**.
     *   If logic is opaque UDF -> **Free Lane**.
 
